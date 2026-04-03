@@ -1,11 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>April FY26 – Goal Tracker</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  .wrap { padding: 1rem 0 1.5rem; font-family: var(--font-sans, sans-serif); }
-  .cal-head { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 1.25rem; }
-  html, body { margin: 0; padding: 0; font-family: Georgia, sans-serif; background: #fff; }
-  .cal-month { font-family: Georgia, serif; font-size: 42px; font-weight: 400; color: #222; line-height: 1; }
-  .cal-year { font-size: 26px; font-weight: 500; color: #222; line-height: 1.2; }
-  .cal-fy { font-size: 12px; color: #888; margin-left: 2px; }
+  body { font-family: Georgia, sans-serif; background: #fff; padding: 1rem; }
+  .cal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; }
+  .cal-month { font-family: Georgia, serif; font-size: 48px; font-weight: 400; color: #222; line-height: 1; }
+  .cal-year { font-size: 36px; font-weight: 400; color: #aaa; }
+  .saved-badge { font-size: 11px; color: #1D9E75; background: #e1f5ee; border-radius: 20px; padding: 3px 10px; display: none; }
   .goals-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.25rem; }
   .goal-chip { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid; }
   .goal-chip .dot { width: 7px; height: 7px; border-radius: 50%; }
@@ -19,6 +24,7 @@
   .cell:hover { border-color: #bbb; }
   .cell.empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .cell.today { border: 2px solid #D4537E; }
+  .cell.has-data { background: #fdfafc; }
   .cell-num { font-size: 13px; font-weight: 500; color: #888; position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; }
   .today-pip { width: 6px; height: 6px; border-radius: 50%; background: #D4537E; display: inline-block; }
   .cell-dots { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; position: relative; z-index: 2; }
@@ -47,23 +53,22 @@
   .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #888; }
 </style>
+</head>
+<body>
 
-<div class="wrap">
-  <div class="cal-head">
-    <div class="cal-month">April</div>
-    <div>
-      <div class="cal-year">2026</div>
-      <div class="cal-fy">FY26</div>
-    </div>
-  </div>
-  <div class="goals-row" id="goalsRow"></div>
-  <div class="day-labels">
-    <div class="dl">Sun</div><div class="dl">Mon</div><div class="dl">Tue</div>
-    <div class="dl">Wed</div><div class="dl">Thu</div><div class="dl">Fri</div><div class="dl">Sat</div>
-  </div>
-  <div class="grid" id="grid"></div>
-  <div class="legend" id="legend"></div>
+<div class="cal-head">
+  <div class="cal-month">April <span class="cal-year">2026</span></div>
+  <span class="saved-badge" id="savedBadge">✓ saved</span>
 </div>
+
+<div class="goals-row" id="goalsRow"></div>
+
+<div class="day-labels">
+  <div class="dl">Sun</div><div class="dl">Mon</div><div class="dl">Tue</div>
+  <div class="dl">Wed</div><div class="dl">Thu</div><div class="dl">Fri</div><div class="dl">Sat</div>
+</div>
+<div class="grid" id="grid"></div>
+<div class="legend" id="legend"></div>
 
 <div class="modal-overlay" id="dayOverlay">
   <div class="modal">
@@ -92,6 +97,7 @@
 </div>
 
 <script>
+const STORAGE_KEY = 'april_fy26_calendar';
 const COLORS = ['#D4537E','#534AB7','#1D9E75','#D85A30','#378ADD','#BA7517','#639922','#993556'];
 const FLORALS = [
   `<svg width="54" height="54" viewBox="0 0 54 54" fill="none"><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(0 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(45 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(90 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(135 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(180 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(225 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(270 27 27)"/><ellipse cx="27" cy="14" rx="7" ry="12" fill="#F4C0D1" transform="rotate(315 27 27)"/><circle cx="27" cy="27" r="6" fill="#FAC775"/></svg>`,
@@ -101,16 +107,33 @@ const FLORALS = [
   `<svg width="42" height="42" viewBox="0 0 42 42" fill="none"><ellipse cx="21" cy="7" rx="5" ry="9" fill="#F4C0D1" transform="rotate(30 21 21)"/><ellipse cx="21" cy="7" rx="5" ry="9" fill="#ED93B1" transform="rotate(90 21 21)"/><ellipse cx="21" cy="7" rx="5" ry="9" fill="#F4C0D1" transform="rotate(150 21 21)"/><ellipse cx="21" cy="7" rx="5" ry="9" fill="#ED93B1" transform="rotate(210 21 21)"/><ellipse cx="21" cy="7" rx="5" ry="9" fill="#F4C0D1" transform="rotate(270 21 21)"/><ellipse cx="21" cy="7" rx="5" ry="9" fill="#ED93B1" transform="rotate(330 21 21)"/><circle cx="21" cy="21" r="5" fill="#FAC775"/></svg>`
 ];
 
-let goals = [
+const DEFAULT_GOALS = [
   {id:1, text:'Deep work 2h/day', color: COLORS[0]},
   {id:2, text:'Exercise', color: COLORS[1]},
   {id:3, text:'Read 20 min', color: COLORS[2]},
 ];
-let dayData = {};
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { goals: DEFAULT_GOALS, dayData: {}, nextId: 4 };
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ goals, dayData, nextId }));
+    const badge = document.getElementById('savedBadge');
+    badge.style.display = 'inline-block';
+    setTimeout(() => badge.style.display = 'none', 2000);
+  } catch(e) {}
+}
+
+let { goals, dayData, nextId } = loadData();
 let editingDay = null;
 let editingGoal = null;
 let editColor = COLORS[0];
-let nextId = 4;
 
 const today = new Date();
 const isApril = today.getFullYear()===2026 && today.getMonth()===3;
@@ -158,7 +181,8 @@ function renderGrid() {
   for (let d=1;d<=30;d++) {
     const cell = document.createElement('div');
     const data = dayData[d]||{};
-    cell.className = 'cell' + (d===todayD?' today':'');
+    const hasData = (data.note&&data.note.trim()) || (data.checked&&data.checked.length);
+    cell.className = 'cell' + (d===todayD?' today':'') + (hasData?' has-data':'');
     cell.onclick = () => openDay(d);
     const floral = document.createElement('div');
     floral.className = 'floral';
@@ -207,7 +231,9 @@ function saveDay() {
   const checked = [];
   cbs.forEach(cb=>{ if(cb.checked) checked.push(parseInt(cb.value)); });
   dayData[editingDay] = {note, checked};
-  closeDay(); renderGrid();
+  saveData();
+  closeDay();
+  renderGrid();
 }
 
 function openEdit(g) {
@@ -235,7 +261,9 @@ function saveEdit() {
   } else {
     goals.push({id:nextId++, text, color:editColor});
   }
-  closeEdit(); renderGoals();
+  saveData();
+  closeEdit();
+  renderGoals();
 }
 
 document.getElementById('dayOverlay').addEventListener('click', e=>{if(e.target===document.getElementById('dayOverlay'))closeDay();});
@@ -243,3 +271,5 @@ document.getElementById('editOverlay').addEventListener('click', e=>{if(e.target
 
 renderGoals();
 </script>
+</body>
+</html>
