@@ -36,8 +36,8 @@
   .cell-num { font-size: 14px; font-weight: 700; color: #3D1F0A; position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; }
   .today-pip { width: 6px; height: 6px; border-radius: 50%; background: #3D1F0A; display: inline-block; }
   .cell-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; position: relative; z-index: 2; }
-  .cell-pct { font-size: 8px; font-family: 'Open Sans', sans-serif; font-weight: 700; color: #3D1F0A; margin-top: 3px; letter-spacing: 0.02em; position: relative; z-index: 2; }
- font-weight: 700; color: #3D1F0A; margin-top: 4px; line-height: 1.4; word-break: break-word; position: relative; z-index: 2; letter-spacing: 0.02em; }
+  .cell-pct { font-size: 10px; font-family: 'Open Sans', sans-serif; font-weight: 700; color: #3D1F0A; margin-top: 2px; letter-spacing: 0.02em; position: relative; z-index: 2; }
+  .cell-note { font-size: 11px; font-family: 'Open Sans', sans-serif; font-weight: 700; color: #3D1F0A; margin-top: 4px; line-height: 1.4; word-break: break-word; position: relative; z-index: 2; letter-spacing: 0.02em; }
   .floral { position: absolute; bottom: 0; right: 0; opacity: 0.28; pointer-events: none; z-index: 1; }
   .modal-overlay { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center; }
   .modal-overlay.open { display: flex; }
@@ -60,32 +60,29 @@
   .edit-modal { background: #7A4A28; border-radius: 14px; border: 1px solid #A0785A; padding: 1.25rem; width: 310px; max-width: 92vw; }
   .edit-modal input { width: 100%; font-size: 13px; padding: 7px 9px; border-radius: 8px; border: 1px solid #A0785A; background: #6B3F1F; color: #F5E6D0; font-family: sans-serif; outline: none; margin-bottom: 10px; box-sizing: border-box; }
   .edit-modal input:focus { border-color: #E8A87C; }
-  .color-swatches { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
-  .swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
-  .swatch.sel { border-color: #F5E6D0; }
+  .color-label { font-size: 12px; color: #E8C9A0; margin-bottom: 8px; }
+  .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.15s, transform 0.15s; }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.sel { border-color: #F5E6D0; transform: scale(1.15); }
   .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #F5E6D0; font-family: 'Open Sans', sans-serif; letter-spacing: 0.04em; text-transform: uppercase; }
 </style>
 </head>
 <body>
 <div class="wrap-inner">
-
   <div class="surbhi-title">✦ Surbhi's Personal Calendar ✦</div>
-
   <div class="cal-head">
     <div class="cal-month">April <span class="cal-year">2026</span></div>
     <span class="saved-badge" id="savedBadge">✓ saved</span>
   </div>
-
   <div class="goals-row" id="goalsRow"></div>
-
   <div class="day-labels">
     <div class="dl">Sun</div><div class="dl">Mon</div><div class="dl">Tue</div>
     <div class="dl">Wed</div><div class="dl">Thu</div><div class="dl">Fri</div><div class="dl">Sat</div>
   </div>
   <div class="grid" id="grid"></div>
   <div class="legend" id="legend"></div>
-
 </div>
 
 <div class="modal-overlay" id="dayOverlay">
@@ -105,7 +102,7 @@
   <div class="edit-modal">
     <div class="modal-hd" id="editTitle">Edit goal</div>
     <input type="text" id="editInput" placeholder="Goal name..." />
-    <div style="font-size:12px;color:#A0785A;margin-bottom:6px;">Color:</div>
+    <div class="color-label">Pick a color:</div>
     <div class="color-swatches" id="colorSwatches"></div>
     <div class="modal-acts">
       <button class="btn-c" onclick="closeEdit()">Cancel</button>
@@ -271,21 +268,25 @@ function saveDay() {
   saveData(); closeDay(); renderGrid();
 }
 
-function openEdit(g) {
-  editingGoal = g;
-  document.getElementById('editTitle').textContent = g ? 'Edit goal' : 'Add goal';
-  document.getElementById('editInput').value = g ? g.text : '';
-  editColor = g ? g.color : COLORS[0];
-  document.getElementById('deleteGoalBtn').style.display = g ? 'inline-block' : 'none';
+function renderSwatches() {
   const sw = document.getElementById('colorSwatches');
   sw.innerHTML = '';
   COLORS.forEach(c => {
     const s = document.createElement('div');
     s.className = 'swatch' + (c === editColor ? ' sel' : '');
     s.style.background = c;
-    s.onclick = () => { editColor = c; openEdit(editingGoal); };
+    s.addEventListener('click', () => { editColor = c; renderSwatches(); });
     sw.appendChild(s);
   });
+}
+
+function openEdit(g) {
+  editingGoal = g;
+  document.getElementById('editTitle').textContent = g ? 'Edit goal' : 'Add goal';
+  document.getElementById('editInput').value = g ? g.text : '';
+  editColor = g ? g.color : COLORS[0];
+  document.getElementById('deleteGoalBtn').style.display = g ? 'inline-block' : 'none';
+  renderSwatches();
   document.getElementById('editOverlay').classList.add('open');
   setTimeout(() => document.getElementById('editInput').focus(), 50);
 }
